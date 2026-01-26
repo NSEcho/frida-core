@@ -25,7 +25,9 @@ bpf_noarch_progs := \
 bpf_arch_progs := \
 	syscall-tracer \
 	$(NULL)
-bpf_noarch_pairs := big:bpfeb little:bpfel
+bpf_noarch_pairs := \
+	big:bpfeb \
+	little:bpfel
 bpf_arch_pairs := \
 	x86:bpfel x86_64:bpfel \
 	arm:bpfel armbe8:bpfeb arm64:bpfel arm64be:bpfeb \
@@ -43,10 +45,19 @@ build-native: ext/linux/tools/include/nolibc/nolibc.h
 bpf_targets :=
 bpf_obj := $(build_dir)/module.o
 
-define bpf_compile
+define recreate_build_dir
 	rm -rf $(build_dir)
 	mkdir -p $(build_dir)
-	clang -O2 -g0 -target $(1) -c $< -o $(bpf_obj)
+endef
+
+define bpf_compile
+	clang \
+		-target $(1) \
+		-O2 -g0 \
+		-I$(build_dir) \
+		$< \
+		-c \
+		-o $(bpf_obj)
 	llvm-strip --strip-debug --strip-unneeded $(bpf_obj)
 	mkdir -p $(@D)
 	install -m644 $(bpf_obj) $@
@@ -56,6 +67,7 @@ define declare-bpf-noarch
 bpf_targets += $(foreach p,$(bpf_noarch_progs),$(bpf_outdir)/noarch-$(1)/$(p).elf)
 
 $(bpf_outdir)/noarch-$(1)/%.elf: %.bpf.c
+	$$(call recreate_build_dir)
 	$$(call bpf_compile,$(2))
 endef
 
@@ -63,6 +75,7 @@ define declare-bpf-arch
 bpf_targets += $(foreach p,$(bpf_arch_progs),$(bpf_outdir)/$(1)/$(p).elf)
 
 $(bpf_outdir)/$(1)/%.elf: %.bpf.c
+	$$(call recreate_build_dir)
 	python3 $(top_srcdir)/lib/base/linux-syscalls/generate-bindings.py \
 		--abi $(1) \
 		--out-c-header $(build_dir)/frida-linux-syscalls.h
