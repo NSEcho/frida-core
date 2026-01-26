@@ -331,6 +331,8 @@ if have_local_backend
       'linux' / 'frida-helper-backend-glue.c',
       'linux' / 'frida-helper-backend-types.c',
       'linux' / 'frida-helper-types.vala',
+      'linux' / 'activity-sampler.vala',
+      'linux' / 'syscall-tracer.vala',
     ]
     if host_abi == 'armhf'
       host_lowlevel_abi = 'arm'
@@ -343,11 +345,14 @@ if have_local_backend
       host_lowlevel_abi = 'arm64be'
     endif
     helpers_native_dir = 'linux' / 'helpers' / 'artifacts' / 'native' / host_lowlevel_abi
+    helpers_bpf_noarch_dir = 'linux' / 'helpers' / 'artifacts' / 'bpf' / ('noarch-' + host_machine.endian())
     helper_backend_data = custom_target('frida-data-helper-backend',
       input: [
         'linux' / 'frida-helper-backend.resources',
         helpers_native_dir / 'bootstrapper.bin',
         helpers_native_dir / 'loader.bin',
+        helpers_bpf_noarch_dir  / 'activity-sampler.elf',
+        helpers_bpf_noarch_dir  / 'syscall-tracer.elf',
       ],
       output: [
         'frida-data-helper-backend.vapi',
@@ -361,6 +366,8 @@ if have_local_backend
         '-o', meson.current_build_dir() / 'frida-data-helper-backend',
         '@INPUT1@',
         '@INPUT2@',
+        '@INPUT3@',
+        '@INPUT4@',
       ],
     )
     helper_backend_sources += [helper_backend_data]
